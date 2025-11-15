@@ -1,0 +1,45 @@
+version: '3.8'
+services:
+  mongo:
+    image: mongo:6
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+  api:
+    build: ./backend
+    depends_on:
+      - mongo
+    environment:
+      - DATABASE_URL=mongodb://mongo:27017
+      - DATABASE_NAME=competitions
+      - PORT=8000
+    ports:
+      - "8000:8000"
+  worker:
+    build: ./backend
+    depends_on:
+      - mongo
+    environment:
+      - DATABASE_URL=mongodb://mongo:27017
+      - DATABASE_NAME=competitions
+      - WORKER_POLL_INTERVAL=3
+    command: ["python", "worker.py"]
+  cron:
+    build: ./backend
+    depends_on:
+      - mongo
+    environment:
+      - DATABASE_URL=mongodb://mongo:27017
+      - DATABASE_NAME=competitions
+      - REMINDER_WINDOW_HOURS=24
+    command: ["python", "cron.py"]
+  web:
+    build: ./frontend
+    environment:
+      - VITE_BACKEND_URL=http://localhost:8000
+    ports:
+      - "3000:3000"
+volumes:
+  mongo_data:
